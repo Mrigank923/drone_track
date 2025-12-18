@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Drone Live Tracking</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            padding: 30px;
+            max-width: 600px;
+            width: 100%;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .status {
+            text-align: center;
+            margin-bottom: 20px;
+            padding: 10px;
+            border-radius: 6px;
+            font-weight: 500;
+        }
+
+        .status.connected {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status.disconnected {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .status.connecting {
+            background-color: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+
+        .coordinates-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .coordinate-item {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 15px;
+            padding: 15px;
+            background: white;
+            border-radius: 6px;
+            border-left: 4px solid #667eea;
+        }
+
+        .coordinate-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .coord-label {
+            font-size: 12px;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 600;
+        }
+
+        .coord-value {
+            font-size: 18px;
+            color: #333;
+            font-weight: 700;
+            font-family: 'Courier New', monospace;
+        }
+
+        .latest-position {
+            background: #e7f3ff;
+            padding: 15px;
+            border-radius: 6px;
+            border-left: 4px solid #2196F3;
+            margin-bottom: 20px;
+        }
+
+        .latest-position h3 {
+            color: #0277bd;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+
+        .position-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .position-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .position-item .label {
+            font-size: 11px;
+            color: #666;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+        }
+
+        .position-item .value {
+            font-size: 16px;
+            font-weight: bold;
+            color: #0277bd;
+            font-family: 'Courier New', monospace;
+        }
+
+        .positions-log {
+            margin-top: 20px;
+        }
+
+        .positions-log h3 {
+            color: #333;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+
+        .log-list {
+            background: #f8f9fa;
+            border-radius: 6px;
+            padding: 10px;
+            max-height: 250px;
+            overflow-y: auto;
+        }
+
+        .log-item {
+            padding: 8px 10px;
+            font-size: 12px;
+            border-bottom: 1px solid #e9ecef;
+            font-family: 'Courier New', monospace;
+            color: #555;
+        }
+
+        .log-item:last-child {
+            border-bottom: none;
+        }
+
+        .log-time {
+            color: #999;
+            font-weight: 600;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        button {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-connect {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-connect:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-connect:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-disconnect {
+            background: #764ba2;
+            color: white;
+        }
+
+        .btn-disconnect:hover {
+            background: #653a8a;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(118, 75, 162, 0.4);
+        }
+
+        .btn-disconnect:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-clear {
+            background: #ff6b6b;
+            color: white;
+        }
+
+        .btn-clear:hover {
+            background: #ee5a52;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255, 107, 107, 0.4);
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 20px;
+            }
+
+            .coordinate-item {
+                grid-template-columns: 1fr;
+            }
+
+            .controls {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚁 Drone Live Tracking</h1>
+        <div class="status disconnected" id="status">Disconnected</div>
+
+        <div class="latest-position">
+            <h3>Latest Position</h3>
+            <div class="position-grid">
+                <div class="position-item">
+                    <div class="label">Latitude</div>
+                    <div class="value" id="latValue">--</div>
+                </div>
+                <div class="position-item">
+                    <div class="label">Longitude</div>
+                    <div class="value" id="lonValue">--</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="positions-log">
+            <h3>Position History</h3>
+            <div class="log-list" id="logList">
+                <div class="log-item" style="color: #999; text-align: center;">Waiting for updates...</div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button class="btn-connect" id="connectBtn" onclick="connect()">Connect</button>
+            <button class="btn-disconnect" id="disconnectBtn" onclick="disconnect()" disabled>Disconnect</button>
+            <button class="btn-clear" onclick="clearLog()">Clear Log</button>
+        </div>
+    </div>
+
+    <script>
+        let ws = null;
+        const statusEl = document.getElementById('status');
+        const connectBtn = document.getElementById('connectBtn');
+        const disconnectBtn = document.getElementById('disconnectBtn');
+        const logList = document.getElementById('logList');
+        const latValue = document.getElementById('latValue');
+        const lonValue = document.getElementById('lonValue');
+
+        // Get the backend URL (adjust if your backend is on a different host/port)
+        const BACKEND_URL = 'ws://localhost:8000/ws/drone';
+
+        function connect() {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                alert('Already connected!');
+                return;
+            }
+
+            statusEl.textContent = 'Connecting...';
+            statusEl.className = 'status connecting';
+            connectBtn.disabled = true;
+
+            ws = new WebSocket(BACKEND_URL);
+
+            ws.onopen = () => {
+                statusEl.textContent = '✓ Connected';
+                statusEl.className = 'status connected';
+                disconnectBtn.disabled = false;
+                addLog('Connected to drone tracking server');
+            };
+
+            ws.onmessage = (event) => {
+                try {
+                    const message = JSON.parse(event.data);
+                    if (message.type === 'drone_position') {
+                        const data = message.data;
+                        latValue.textContent = data.latitude.toFixed(6);
+                        lonValue.textContent = data.longitude.toFixed(6);
+                        addLog(`📍 Lat: ${data.latitude.toFixed(6)}, Lon: ${data.longitude.toFixed(6)}`);
+                    }
+                } catch (e) {
+                    console.error('Error parsing message:', e);
+                }
+            };
+
+            ws.onerror = (error) => {
+                console.error('WebSocket error:', error);
+                statusEl.textContent = 'Error connecting';
+                statusEl.className = 'status disconnected';
+                addLog('❌ Connection error');
+            };
+
+            ws.onclose = () => {
+                statusEl.textContent = 'Disconnected';
+                statusEl.className = 'status disconnected';
+                connectBtn.disabled = false;
+                disconnectBtn.disabled = true;
+                addLog('Disconnected from server');
+            };
+        }
+
+        function disconnect() {
+            if (ws) {
+                ws.close();
+            }
+        }
+
+        function addLog(message) {
+            const now = new Date().toLocaleTimeString();
+            const logItem = document.createElement('div');
+            logItem.className = 'log-item';
+            logItem.innerHTML = `<span class="log-time">${now}</span> - ${message}`;
+
+            // Clear placeholder if exists
+            if (logList.children[0].textContent.includes('Waiting for updates')) {
+                logList.innerHTML = '';
+            }
+
+            logList.insertBefore(logItem, logList.firstChild);
+
+            // Keep only last 50 items
+            while (logList.children.length > 50) {
+                logList.removeChild(logList.lastChild);
+            }
+        }
+
+        function clearLog() {
+            logList.innerHTML = '<div class="log-item" style="color: #999; text-align: center;">Log cleared</div>';
+        }
+    </script>
+</body>
+</html>

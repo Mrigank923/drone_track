@@ -1,10 +1,12 @@
 import os
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse
 from typing import List, Optional
+import json
 
 from database import get_db
 import schemas
+from ws_manager import manager
 
 router = APIRouter()
 
@@ -25,6 +27,24 @@ def _serialize_doc(doc: dict) -> dict:
     if _id is not None:
         out["id"] = str(_id)
     return out
+
+
+# WebSocket endpoint for live drone tracking
+@router.websocket("/ws/drone")
+async def websocket_drone_endpoint(websocket: WebSocket):
+    """
+    WebSocket endpoint for real-time drone position updates.
+    Clients connect here to receive live drone coordinates as they're updated.
+    """
+    await manager.connect(websocket)
+    try:
+        while True:
+            # Keep the connection alive and listen for any incoming messages
+            # (clients can optionally send auth or other control messages)
+            data = await websocket.receive_text()
+            # You can process incoming messages here if needed
+    except WebSocketDisconnect:
+        manager.disconnect(websocket)
 
 # create a mine
 @router.post("/mines", response_model=schemas.CoordOut)
@@ -81,6 +101,12 @@ async def receive_drone(drone: schemas.DroneCreate, db=Depends(get_db)):
     result = await db["drone_positions"].insert_one(doc)
     inserted = await db["drone_positions"].find_one({"_id": result.inserted_id})
     payload = _serialize_doc(inserted)
+
+    # Broadcast the new drone position to all connected WebSocket clients
+    await manager.broadcast({
+        "type": "drone_position",
+        "data": payload
+    })
 
     # No websocket: frontend should poll or call the API to fetch positions
     return JSONResponse({"status": "ok", "data": payload})

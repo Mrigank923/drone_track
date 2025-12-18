@@ -1,103 +1,291 @@
-# drone FastAPI Backend
+# Drone FastAPI Backend
 
-Simple FastAPI backend with endpoints to store mines, poles, drone positions and to broadcast drone positions via WebSocket and webhooks.
+A robust FastAPI backend for drone tracking with real-time coordinate broadcasting via WebSocket. Store and manage mines, poles, and live drone positions with multi-client WebSocket support.
 
-APIs
-- POST /mines -> store mine coordinates
-- POST /poles -> store pole coordinates
-- POST /drone -> receive drone position (stores and broadcasts)
-- GET /poles -> returns all poles
-- GET /mines -> returns all mines
-- WebSocket /ws -> receive live drone updates
+## Features
+- 📍 Store and retrieve mines and pole coordinates
+- 🚁 Real-time drone position tracking via WebSocket
+- 🔐 Auth key-based API security
+- 📡 Multi-client WebSocket broadcasting
+- 🗄️ MongoDB integration for data persistence
+- 🚀 CORS enabled for cross-origin requests
 
-Run locally
+## API Endpoints
 
-1. Create a virtualenv and install dependencies:
+### REST Endpoints
+- `POST /mines` → Store mine coordinates
+- `GET /mines` → Retrieve all mines
+- `DELETE /mines` → Delete all mines (requires auth_key)
+- `POST /poles` → Store pole coordinates
+- `GET /poles` → Retrieve all poles
+- `DELETE /poles` → Delete all poles (requires auth_key)
+- `POST /drone` → Receive drone position (stores and broadcasts to WebSocket clients)
+- `GET /drone` → Retrieve all drone positions
+- `GET /drone/latest` → Get the latest drone position
+- `DELETE /drone` → Delete all drone positions (requires auth_key)
+
+### WebSocket Endpoint
+- `WebSocket /ws/drone` → Connect for real-time drone position updates
+
+## Installation
+
+### Prerequisites
+- Python 3.8+
+- MongoDB (local or remote)
+
+### Setup
+
+1. Create and activate a virtual environment:
 
 ```bash
 python -m venv .venv
-source .venv/bin/activate
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+```
+
+2. Install dependencies:
+
+```bash
 pip install -r requirements.txt
 ```
 
-2. Start the server:
+3. Create a `.env` file in the project root (optional):
+
+```env
+MONGO_URI=mongodb://localhost:27017
+MONGO_DB=drone_db
+AUTH_KEY=your_secret_key
+```
+
+4. Start the server:
 
 ```bash
 uvicorn main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-3. Use the endpoints or connect to websocket at ws://localhost:8000/ws
+The API will be available at `http://localhost:8000` and WebSocket at `ws://localhost:8000/ws/drone`.
+
+## WebSocket Usage
+
+### Connecting from JavaScript
+
+```javascript
+// Connect to WebSocket
+const ws = new WebSocket('ws://localhost:8000/ws/drone');
+
+// Connection opened
+ws.onopen = () => {
+    console.log('Connected to drone tracking server');
+};
+
+// Receive drone position updates
+ws.onmessage = (event) => {
+    const message = JSON.parse(event.data);
+    if (message.type === 'drone_position') {
+        const { latitude, longitude, id } = message.data;
+        console.log(`Drone position: Lat ${latitude}, Lon ${longitude}`);
+    }
+};
+
+// Handle disconnection
+ws.onclose = () => {
+    console.log('Disconnected from server');
+};
+
+// Handle errors
+ws.onerror = (error) => {
+    console.error('WebSocket error:', error);
+};
+```
+
+### Message Format
+
+The server broadcasts drone positions in the following format:
+
+```json
+{
+    "type": "drone_position",
+    "data": {
+        "id": "507f1f77bcf86cd799439011",
+        "latitude": 12.9730,
+        "longitude": 77.5960
+    }
+}
+```
+
+### Web Dashboard
+
+A sample HTML dashboard is provided in `drone_tracking.html`. Open it in a browser to visualize live drone tracking with:
+- Real-time coordinate display
+- Position history log with timestamps
+- Connection status indicator
+- Responsive design
+
+Simply open the file and click "Connect" to start receiving live updates.
+
+Run locally
 
 Postman testing guide
 ---------------------
 
-Quick setup
+## Testing with Postman
 
-- Start the server as above and confirm it is reachable at http://localhost:8000.
-- In Postman create an Environment with these variables:
-	- base_url = http://localhost:8000
-	- auth_key = devkey   # change to the value set in your `.env`
+### Quick Setup
 
-Notes about auth
-- All POST endpoints require an `auth_key` field in the JSON body.
-- DELETE endpoints require `auth_key` as a query parameter (or header if you modify the API).
+1. Start the server and confirm it's reachable at `http://localhost:8000`
+2. In Postman, create an Environment with these variables:
+   - `base_url` = `http://localhost:8000`
+   - `auth_key` = `devkey` (or your custom AUTH_KEY from `.env`)
 
-Requests (examples)
+### Authentication Notes
 
-1) POST /mines
-- URL: {{base_url}}/mines
-- Method: POST
-- Headers: Content-Type: application/json
-- Body (raw JSON):
+- All `POST` endpoints require an `auth_key` field in the JSON body
+- All `DELETE` endpoints require `auth_key` as a query parameter
+- The default auth key is `devkey` (set `AUTH_KEY` environment variable to override)
 
-```json
-{
-	"latitude": 12.9715987,
-	"longitude": 77.594566,
-	"label": "mine-1",
-	"auth_key": "{{auth_key}}"
-}
-```
+### Example Requests
 
-2) POST /poles
-- URL: {{base_url}}/poles
-- Body:
+### Example Requests
+
+#### 1. Create Mine
+- **URL**: `{{base_url}}/mines`
+- **Method**: `POST`
+- **Headers**: `Content-Type: application/json`
+- **Body**:
 
 ```json
 {
-	"latitude": 12.9721,
-	"longitude": 77.595,
-	"label": "pole-A",
-	"auth_key": "{{auth_key}}"
+    "latitude": 12.9715987,
+    "longitude": 77.594566,
+    "label": "mine-1",
+    "auth_key": "{{auth_key}}"
 }
 ```
 
-3) POST /drone
-- URL: {{base_url}}/drone
-- Body:
+#### 2. Create Pole
+- **URL**: `{{base_url}}/poles`
+- **Method**: `POST`
+- **Body**:
 
 ```json
 {
-	"latitude": 12.9730,
-	"longitude": 77.5960,
-	"auth_key": "{{auth_key}}"
+    "latitude": 12.9721,
+    "longitude": 77.595,
+    "label": "pole-A",
+    "auth_key": "{{auth_key}}"
 }
 ```
 
-4) GET /poles
-- URL: {{base_url}}/poles
-- Method: GET
+#### 3. Submit Drone Position (triggers WebSocket broadcast)
+- **URL**: `{{base_url}}/drone`
+- **Method**: `POST`
+- **Body**:
 
-5) GET /mines
-- URL: {{base_url}}/mines
-- Method: GET
+```json
+{
+    "latitude": 12.9730,
+    "longitude": 77.5960,
+    "auth_key": "{{auth_key}}"
+}
+```
 
-6) DELETE examples (requires auth_key as query param)
-- Delete all poles:
+**Response** (broadcasted to all WebSocket clients):
+```json
+{
+    "status": "ok",
+    "data": {
+        "id": "507f1f77bcf86cd799439011",
+        "latitude": 12.9730,
+        "longitude": 77.5960
+    }
+}
+```
 
+#### 4. Get All Poles
+- **URL**: `{{base_url}}/poles`
+- **Method**: `GET`
+
+#### 5. Get All Mines
+- **URL**: `{{base_url}}/mines`
+- **Method**: `GET`
+
+#### 6. Get All Drone Positions
+- **URL**: `{{base_url}}/drone`
+- **Method**: `GET`
+
+#### 7. Get Latest Drone Position
+- **URL**: `{{base_url}}/drone/latest`
+- **Method**: `GET`
+
+#### 8. Delete Operations (requires auth_key as query parameter)
+
+Delete all poles:
 ```
 DELETE {{base_url}}/poles?auth_key={{auth_key}}
 ```
+
+Delete all mines:
+```
+DELETE {{base_url}}/mines?auth_key={{auth_key}}
+```
+
+Delete all drone positions:
+```
+DELETE {{base_url}}/drone?auth_key={{auth_key}}
+```
+
+## Environment Variables
+
+Configure the following in your `.env` file:
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `MONGO_URI` | `mongodb://localhost:27017` | MongoDB connection string |
+| `MONGO_DB` | `drone_db` | MongoDB database name |
+| `AUTH_KEY` | `devkey` | Authentication key for API endpoints |
+
+## Project Structure
+
+```
+.
+├── main.py              # FastAPI app entry point with CORS setup
+├── api.py               # API routes (REST + WebSocket endpoints)
+├── database.py          # MongoDB async client setup
+├── schemas.py           # Pydantic data models
+├── ws_manager.py        # WebSocket connection manager
+├── drone_tracking.html  # Sample frontend dashboard
+├── requirements.txt     # Python dependencies
+├── README.md            # This file
+└── .env                 # Environment variables (create this)
+```
+
+## Technical Details
+
+### WebSocket Connection Manager (`ws_manager.py`)
+- Manages active WebSocket connections
+- Broadcasts messages to all connected clients
+- Handles client disconnections gracefully
+
+### Real-Time Broadcasting Flow
+1. Client POSTs drone position to `/drone` endpoint with auth_key
+2. Position is saved to MongoDB
+3. Position is automatically broadcasted to all WebSocket-connected clients
+4. Clients receive JSON message with position data
+5. Frontend updates dashboard in real-time
+
+### Data Models
+- **CoordBase**: Base model with latitude and longitude
+- **MineCreate/PoleCreate/DroneCreate**: Input schemas with auth_key
+- **CoordOut**: Output schema with MongoDB ObjectId as string id
+
+## Requirements
+
+All dependencies are listed in `requirements.txt`:
+- FastAPI: Web framework
+- Uvicorn: ASGI server
+- Motor: Async MongoDB driver
+- Pydantic: Data validation
+- Python-dotenv: Environment variables
+- Websockets: WebSocket support
 
 Importing into Postman
 - Create a new Collection and add the requests above. Save them to the collection.
