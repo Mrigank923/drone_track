@@ -28,3 +28,10 @@ class DronePosition(Base):
     longitude = Column(Float, nullable=False)
     recorded_at = Column(DateTime(timezone=True), server_default=func.now())
 
+class SafePath(Base):
+    __tablename__ = "safe_paths"
+    id = Column(Integer, primary_key=True, index=True)
+    block_latitude = Column(Float, nullable=False)
+    block_longitude = Column(Float, nullable=False)
+    recorded_at = Column(DateTime(timezone=True), server_default=func.now())
+

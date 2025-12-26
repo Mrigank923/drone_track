@@ -150,3 +150,40 @@ async def latest_drone(db=Depends(get_db)):
     if not doc:
         return JSONResponse({"error": "not found"}, status_code=404)
     return _serialize_doc(doc)
+
+# create a safe path block
+@router.post("/safe_paths", response_model=schemas.SafePathCreate)
+async def create_safe_path(safe_path: schemas.SafePathCreate, db=Depends(get_db)):
+    # verify auth key
+    if not _verify_key(safe_path.auth_key):
+        return JSONResponse({"error": "unauthorized"}, status_code=401)
+
+    doc = {"block_latitude": safe_path.block_latitude, "block_longitude": safe_path.block_longitude}
+    result = await db["safe_paths"].insert_one(doc)
+    inserted = await db["safe_paths"].find_one({"_id": result.inserted_id})
+    return _serialize_doc(inserted)
+
+# delete all safe paths (requires auth_key as query parameter)
+@router.delete("/safe_paths")
+async def delete_safe_paths(auth_key: str, db=Depends(get_db)):
+    # verify auth key
+    if not _verify_key(auth_key):
+        return JSONResponse({"error": "unauthorized"}, status_code=401)
+
+    result = await db["safe_paths"].delete_many({})
+    return JSONResponse({"status": "deleted", "count": result.deleted_count})
+
+# get all safe paths
+@router.get("/safe_paths", response_model=List[schemas.SafePathOut])
+async def get_safe_paths(db=Depends(get_db)):
+    cursor = db["safe_paths"].find()
+    docs = await cursor.to_list(length=None)
+    return [_serialize_doc(d) for d in docs]
+ 
+ # get latest safe path
+@router.get("/safe_paths/latest", response_model=schemas.SafePathOut)
+async def latest_safe_path(db=Depends(get_db)):
+    doc = await db["safe_paths"].find_one(sort=[("_id", -1)])
+    if not doc:
+        return JSONResponse({"error": "not found"}, status_code=404)
+    return _serialize_doc(doc)

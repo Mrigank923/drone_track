@@ -26,3 +26,17 @@ class DroneCreate(CoordBase):
 class CoordOut(CoordBase):
     id: str
     model_config = ConfigDict(from_attributes=True)
+
+class SafePathCreate(BaseModel):
+    block_latitude: float = Field(..., example=12.34567)
+    block_longitude: float = Field(..., example=76.54321)
+    auth_key: str
+
+
+class SafePathOut(CoordBase):
+    id: str
+    model_config = ConfigDict(from_attributes=True)
+    recorded_at: datetime
+
+
+    

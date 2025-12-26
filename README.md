@@ -13,16 +13,19 @@ A robust FastAPI backend for drone tracking with real-time coordinate broadcasti
 ## API Endpoints
 
 ### REST Endpoints
-- `POST /mines` → Store mine coordinates
+- `POST /mines` → Store mine coordinates (requires auth_key)
 - `GET /mines` → Retrieve all mines
 - `DELETE /mines` → Delete all mines (requires auth_key)
-- `POST /poles` → Store pole coordinates
+- `POST /poles` → Store pole coordinates (requires auth_key)
 - `GET /poles` → Retrieve all poles
 - `DELETE /poles` → Delete all poles (requires auth_key)
-- `POST /drone` → Receive drone position (stores and broadcasts to WebSocket clients)
+- `POST /drone` → Receive drone position (stores and broadcasts to WebSocket clients)(requires auth_key)
 - `GET /drone` → Retrieve all drone positions
 - `GET /drone/latest` → Get the latest drone position
 - `DELETE /drone` → Delete all drone positions (requires auth_key)
+- `POST /safe_paths` → Store safe path coordinates (requires auth_key)
+- `GET /safe_paths` → Retrieve all safe paths coordinates
+- `DELETE /safe_paths` → Delete all safe paths coordinates (requires auth_key)
 
 ### WebSocket Endpoint
 - `WebSocket /ws/drone` → Connect for real-time drone position updates
